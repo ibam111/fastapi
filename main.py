@@ -1,5 +1,8 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from typing import Literal
 from datetime import datetime, timedelta
@@ -35,6 +38,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# إعداد ملفات القوالب والملفات الثابتة
+templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # نموذج البيانات مع التحقق
 class BirthData(BaseModel):
@@ -107,21 +114,14 @@ def rate_limit(calls: int, period: int):
         return wrapper
     return decorator
 
-@app.get("/")
-@rate_limit(calls=100, period=60)
-async def read_root():
-    return {"message": "مرحبًا بك في نظام تسجيل المواليد!"}
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 @app.post("/save-data/")
 @rate_limit(calls=10, period=60)
 async def save_data(data: BirthData):
     try:
-        # التحقق من نوع رقم الأب والأم
-        if data.father_id_type not in ["رقم الموحدة", "رقم هوية الأحوال"]:
-            raise HTTPException(status_code=400, detail="نوع رقم الأب غير صحيح.")
-        if data.mother_id_type not in ["رقم الموحدة", "رقم هوية الأحوال"]:
-            raise HTTPException(status_code=400, detail="نوع رقم الأم غير صحيح.")
-
         with db_manager.get_connection() as conn:
             cursor = conn.cursor()
 
@@ -151,31 +151,6 @@ async def save_data(data: BirthData):
 
     except Exception as e:
         logger.error(f"خطأ في حفظ البيانات: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/delete-old-entries/")
-@rate_limit(calls=5, period=3600)  # 5 calls per hour
-async def delete_old_entries():
-    try:
-        with db_manager.get_connection() as conn:
-            cursor = conn.cursor()
-            cutoff_time = (datetime.now() - timedelta(days=30)).isoformat()
-            
-            cursor.execute("""
-            DELETE FROM births 
-            WHERE created_at < ?
-            """, (cutoff_time,))
-            
-            deleted_count = cursor.rowcount
-            conn.commit()
-            
-            logger.info(f"تم حذف {deleted_count} سجلات قديمة")
-            return {
-                "message": f"تم حذف {deleted_count} إدخالات قديمة",
-                "details": {"deleted_count": deleted_count}
-            }
-    except Exception as e:
-        logger.error(f"خطأ في حذف السجلات القديمة: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/search/")
