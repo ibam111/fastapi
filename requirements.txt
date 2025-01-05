@@ -1,4 +1,6 @@
-FastAPI
-Uvicorn
-Jinja2
-starlette.staticfiles:
+fastapi==0.98.0
+uvicorn==0.22.0
+jinja2==3.1.2
+starlette==0.26.1
+pydantic==1.10.9
+sqlite3-binary==0.0.1
