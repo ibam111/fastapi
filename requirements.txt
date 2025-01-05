@@ -1,0 +1,4 @@
+FastAPI
+Uvicorn
+Jinja2
+starlette.staticfiles:
