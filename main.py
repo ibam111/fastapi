@@ -1,7 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Literal
@@ -38,9 +35,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# إعداد الملفات الثابتة والقوالب
-templates = Jinja2Templates(directory="templates")
 
 # نموذج البيانات مع التحقق
 class BirthData(BaseModel):
@@ -113,10 +107,10 @@ def rate_limit(calls: int, period: int):
         return wrapper
     return decorator
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 @rate_limit(calls=100, period=60)
-async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+async def read_root():
+    return {"message": "مرحبًا بك في نظام تسجيل المواليد!"}
 
 @app.post("/save-data/")
 @rate_limit(calls=10, period=60)
