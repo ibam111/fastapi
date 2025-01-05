@@ -40,7 +40,6 @@ app.add_middleware(
 )
 
 # إعداد الملفات الثابتة والقوالب
-app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # نموذج البيانات مع التحقق
